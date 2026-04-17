@@ -6,7 +6,7 @@ services:
     container_name: alburhan-cms-api
     restart: unless-stopped
     ports:
-      - "8001:8001"
+      - "8002:8001"
     environment:
       - DATABASE_URL=postgresql://postgres:Sha2558161@13.60.4.75:5432/alburhancms
       - SECRET_KEY=alburhan-cms-secret-key-2024-change-in-production
