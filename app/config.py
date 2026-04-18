@@ -14,9 +14,10 @@ class Settings(BaseSettings):
     # --- Storage backend ---
     # "local" = write files to UPLOAD_DIR on the container filesystem
     # "s3"    = upload files to S3 and return a public URL
-    STORAGE_BACKEND: str = "local"
+    STORAGE_BACKEND: str = "s3"
 
     # --- AWS / S3 ---
+    # Values are loaded from .env at runtime (see .env.example).
     AWS_ACCESS_KEY_ID: Optional[str] = None
     AWS_SECRET_ACCESS_KEY: Optional[str] = None
     AWS_REGION: str = "eu-north-1"
