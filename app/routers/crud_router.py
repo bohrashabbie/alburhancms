@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from app.database import get_db, Base
 from app.utils.auth import get_current_user
 from app.utils.media import save_upload_and_register_media
+from app.utils.cache import invalidates_cache
 from app.models.user import User
 
 
@@ -50,6 +51,7 @@ def create_crud_router(
         return item
 
     @router.post("", response_model=schema_out)
+    @invalidates_cache
     def create_item(
         data: schema_create,
         db: Session = Depends(get_db),
@@ -63,6 +65,7 @@ def create_crud_router(
 
     if allowed_image_fields:
         @router.post("/with-image", response_model=schema_out)
+        @invalidates_cache
         async def create_item_with_image(
             payload: str = Form(...),
             file: UploadFile = File(...),
@@ -96,6 +99,7 @@ def create_crud_router(
             return item
 
     @router.put("/{item_id}", response_model=schema_out)
+    @invalidates_cache
     def update_item(
         item_id: int,
         data: schema_update,
@@ -113,6 +117,7 @@ def create_crud_router(
 
     if allowed_image_fields:
         @router.post("/{item_id}/upload-image", response_model=schema_out)
+        @invalidates_cache
         async def upload_item_image(
             item_id: int,
             file: UploadFile = File(...),
@@ -141,6 +146,7 @@ def create_crud_router(
             return item
 
     @router.delete("/{item_id}")
+    @invalidates_cache
     def delete_item(
         item_id: int,
         db: Session = Depends(get_db),

@@ -9,6 +9,7 @@ from app.schemas.schemas import (
     ServiceItemOut, ServiceItemCreate,
 )
 from app.utils.auth import get_current_user
+from app.utils.cache import invalidates_cache
 
 router = APIRouter(prefix="/api/services", tags=["Services"])
 
@@ -30,6 +31,7 @@ def get_service(service_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=ServiceOut)
+@invalidates_cache
 def create_service(data: ServiceCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     items_data = data.items
     svc_data = data.model_dump(exclude={"items"})
@@ -44,6 +46,7 @@ def create_service(data: ServiceCreate, db: Session = Depends(get_db), current_u
 
 
 @router.put("/{service_id}", response_model=ServiceOut)
+@invalidates_cache
 def update_service(service_id: int, data: ServiceUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     svc = db.query(Service).filter(Service.id == service_id).first()
     if not svc:
@@ -56,6 +59,7 @@ def update_service(service_id: int, data: ServiceUpdate, db: Session = Depends(g
 
 
 @router.delete("/{service_id}")
+@invalidates_cache
 def delete_service(service_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     svc = db.query(Service).filter(Service.id == service_id).first()
     if not svc:
@@ -72,6 +76,7 @@ def list_service_items(service_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{service_id}/items", response_model=ServiceItemOut)
+@invalidates_cache
 def add_service_item(service_id: int, data: ServiceItemCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     svc = db.query(Service).filter(Service.id == service_id).first()
     if not svc:
@@ -84,6 +89,7 @@ def add_service_item(service_id: int, data: ServiceItemCreate, db: Session = Dep
 
 
 @router.put("/items/{item_id}", response_model=ServiceItemOut)
+@invalidates_cache
 def update_service_item(item_id: int, data: ServiceItemCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     item = db.query(ServiceItem).filter(ServiceItem.id == item_id).first()
     if not item:
@@ -96,6 +102,7 @@ def update_service_item(item_id: int, data: ServiceItemCreate, db: Session = Dep
 
 
 @router.delete("/items/{item_id}")
+@invalidates_cache
 def delete_service_item(item_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     item = db.query(ServiceItem).filter(ServiceItem.id == item_id).first()
     if not item:

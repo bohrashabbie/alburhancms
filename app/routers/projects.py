@@ -10,6 +10,7 @@ from app.schemas.schemas import (
     ProjectImageOut, ProjectImageCreate,
 )
 from app.utils.auth import get_current_user
+from app.utils.cache import invalidates_cache
 from app.utils.media import save_upload_and_register_media
 
 router = APIRouter(prefix="/api/projects", tags=["Projects"])
@@ -33,6 +34,7 @@ def get_category(cat_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/categories", response_model=ProjectCategoryOut)
+@invalidates_cache
 def create_category(data: ProjectCategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     cat = ProjectCategory(**data.model_dump())
     db.add(cat)
@@ -42,6 +44,7 @@ def create_category(data: ProjectCategoryCreate, db: Session = Depends(get_db), 
 
 
 @router.put("/categories/{cat_id}", response_model=ProjectCategoryOut)
+@invalidates_cache
 def update_category(cat_id: int, data: ProjectCategoryUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     cat = db.query(ProjectCategory).filter(ProjectCategory.id == cat_id).first()
     if not cat:
@@ -54,6 +57,7 @@ def update_category(cat_id: int, data: ProjectCategoryUpdate, db: Session = Depe
 
 
 @router.post("/categories/{cat_id}/upload-cover", response_model=ProjectCategoryOut)
+@invalidates_cache
 async def upload_category_cover(
     cat_id: int,
     file: UploadFile = File(...),
@@ -76,6 +80,7 @@ async def upload_category_cover(
 
 
 @router.delete("/categories/{cat_id}")
+@invalidates_cache
 def delete_category(cat_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     cat = db.query(ProjectCategory).filter(ProjectCategory.id == cat_id).first()
     if not cat:
@@ -112,6 +117,7 @@ def get_project(project_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=ProjectOut)
+@invalidates_cache
 def create_project(data: ProjectCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     proj = Project(**data.model_dump())
     db.add(proj)
@@ -121,6 +127,7 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db), current_u
 
 
 @router.put("/{project_id}", response_model=ProjectOut)
+@invalidates_cache
 def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
@@ -133,6 +140,7 @@ def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(g
 
 
 @router.delete("/{project_id}")
+@invalidates_cache
 def delete_project(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
@@ -149,6 +157,7 @@ def list_project_images(project_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{project_id}/images", response_model=ProjectImageOut)
+@invalidates_cache
 def add_project_image(project_id: int, data: ProjectImageCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
@@ -161,6 +170,7 @@ def add_project_image(project_id: int, data: ProjectImageCreate, db: Session = D
 
 
 @router.post("/{project_id}/images/upload", response_model=ProjectImageOut)
+@invalidates_cache
 async def upload_project_image(
     project_id: int,
     file: UploadFile = File(...),
@@ -191,6 +201,7 @@ async def upload_project_image(
 
 
 @router.delete("/images/{image_id}")
+@invalidates_cache
 def delete_project_image(image_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     img = db.query(ProjectImage).filter(ProjectImage.id == image_id).first()
     if not img:

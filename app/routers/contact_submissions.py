@@ -6,6 +6,7 @@ from app.models.contact_submission import ContactSubmission
 from app.models.user import User
 from app.schemas.schemas import ContactSubmissionOut
 from app.utils.auth import get_current_user
+from app.utils.cache import invalidates_cache
 
 router = APIRouter(prefix="/api/contact-submissions", tags=["Contact Submissions"])
 
@@ -31,6 +32,7 @@ def get_submission(submission_id: int, db: Session = Depends(get_db), current_us
 
 
 @router.put("/{submission_id}/read")
+@invalidates_cache
 def mark_as_read(submission_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     sub = db.query(ContactSubmission).filter(ContactSubmission.id == submission_id).first()
     if not sub:
@@ -41,6 +43,7 @@ def mark_as_read(submission_id: int, db: Session = Depends(get_db), current_user
 
 
 @router.delete("/{submission_id}")
+@invalidates_cache
 def delete_submission(submission_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     sub = db.query(ContactSubmission).filter(ContactSubmission.id == submission_id).first()
     if not sub:
