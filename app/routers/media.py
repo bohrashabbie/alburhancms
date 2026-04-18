@@ -1,5 +1,5 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.media_file import MediaFile
@@ -14,6 +14,7 @@ router = APIRouter(prefix="/api/media", tags=["Media"])
 @router.post("/upload", response_model=MediaFileOut)
 async def upload_file(
     file: UploadFile = File(...),
+    folder: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -21,7 +22,7 @@ async def upload_file(
         file=file,
         db=db,
         current_user=current_user,
-        folder="media",
+        folder=folder or "media",
     )
 
 
