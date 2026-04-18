@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -9,6 +10,22 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
     UPLOAD_DIR: str = "uploads"
+
+    # --- Storage backend ---
+    # "local" = write files to UPLOAD_DIR on the container filesystem
+    # "s3"    = upload files to S3 and return a public URL
+    STORAGE_BACKEND: str = "local"
+
+    # --- AWS / S3 ---
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_REGION: str = "eu-north-1"
+    S3_BUCKET: Optional[str] = None
+    # Optional CDN / custom-domain URL to build public links.
+    # Leave unset to auto-build: https://{bucket}.s3.{region}.amazonaws.com
+    S3_PUBLIC_BASE_URL: Optional[str] = None
+    # Extra key prefix inside the bucket (e.g. "cms/"). No leading slash.
+    S3_KEY_PREFIX: str = ""
 
     class Config:
         env_file = ".env"

@@ -7,12 +7,16 @@ services:
     restart: unless-stopped
     ports:
       - "8002:8001"
+    env_file:
+      - .env
     environment:
+      # these ones are baked into the compose file; anything else (AWS creds,
+      # STORAGE_BACKEND, S3_BUCKET, ...) comes from .env
       - DATABASE_URL=postgresql://postgres:Sha2558161@13.60.4.75:5432/alburhancms
       - SECRET_KEY=alburhan-cms-secret-key-2024-change-in-production
       - ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=1440
-      - CORS_ORIGINS=http://localhost,http://localhost:80,http://13.60.4.75
+      - CORS_ORIGINS=http://localhost,http://localhost:80,http://13.60.4.75,http://13.60.4.75:3000,http://13.60.4.75:8002,https://alburhan-regional.com,https://www.alburhan-regional.com
       - UPLOAD_DIR=uploads
     volumes:
       - uploads_data:/app/uploads
