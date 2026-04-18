@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.project import ProjectCategory, Project, ProjectImage
@@ -10,6 +10,7 @@ from app.schemas.schemas import (
     ProjectImageOut, ProjectImageCreate,
 )
 from app.utils.auth import get_current_user
+from app.utils.media import save_upload_and_register_media
 
 router = APIRouter(prefix="/api/projects", tags=["Projects"])
 
@@ -47,6 +48,28 @@ def update_category(cat_id: int, data: ProjectCategoryUpdate, db: Session = Depe
         raise HTTPException(status_code=404, detail="Category not found")
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(cat, k, v)
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
+@router.post("/categories/{cat_id}/upload-cover", response_model=ProjectCategoryOut)
+async def upload_category_cover(
+    cat_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    cat = db.query(ProjectCategory).filter(ProjectCategory.id == cat_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+    media = await save_upload_and_register_media(
+        file=file,
+        db=db,
+        current_user=current_user,
+        folder="projects-categories",
+    )
+    cat.cover_image_url = media.file_path
     db.commit()
     db.refresh(cat)
     return cat
@@ -131,6 +154,36 @@ def add_project_image(project_id: int, data: ProjectImageCreate, db: Session = D
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
     img = ProjectImage(project_id=project_id, **data.model_dump())
+    db.add(img)
+    db.commit()
+    db.refresh(img)
+    return img
+
+
+@router.post("/{project_id}/images/upload", response_model=ProjectImageOut)
+async def upload_project_image(
+    project_id: int,
+    file: UploadFile = File(...),
+    sort_order: int = Form(0),
+    is_active: bool = Form(True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        raise HTTPException(status_code=404, detail="Project not found")
+    media = await save_upload_and_register_media(
+        file=file,
+        db=db,
+        current_user=current_user,
+        folder="projects-images",
+    )
+    img = ProjectImage(
+        project_id=project_id,
+        image_url=media.file_path,
+        sort_order=sort_order,
+        is_active=is_active,
+    )
     db.add(img)
     db.commit()
     db.refresh(img)

@@ -1,10 +1,12 @@
 """Generic CRUD router factory for simple entities."""
+import json
 from typing import Type, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from app.database import get_db, Base
 from app.utils.auth import get_current_user
+from app.utils.media import save_upload_and_register_media
 from app.models.user import User
 
 
@@ -17,8 +19,16 @@ def create_crud_router(
     schema_update: Type[BaseModel],
     public_read: bool = True,
     order_by: str = "sort_order",
+    image_fields: Optional[List[str]] = None,
 ) -> APIRouter:
     router = APIRouter(prefix=prefix, tags=tags)
+    model_column_names = {c.name for c in model.__table__.columns}
+    auto_image_fields = [
+        c for c in model_column_names
+        if c.endswith("_url") and any(k in c for k in ("image", "logo", "flag", "cover"))
+    ]
+    allowed_image_fields = image_fields or auto_image_fields
+    route_folder = prefix.strip("/").replace("api/", "").replace("/", "-")
 
     @router.get("", response_model=List[schema_out])
     def list_items(
@@ -51,6 +61,40 @@ def create_crud_router(
         db.refresh(item)
         return item
 
+    if allowed_image_fields:
+        @router.post("/with-image", response_model=schema_out)
+        async def create_item_with_image(
+            payload: str = Form(...),
+            file: UploadFile = File(...),
+            field: str = Form("image_url"),
+            db: Session = Depends(get_db),
+            current_user: User = Depends(get_current_user),
+        ):
+            if field not in allowed_image_fields:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid image field '{field}'. Allowed: {allowed_image_fields}",
+                )
+            try:
+                payload_dict = json.loads(payload)
+            except json.JSONDecodeError:
+                raise HTTPException(status_code=400, detail="`payload` must be valid JSON")
+
+            validated = schema_create.model_validate(payload_dict)
+            media = await save_upload_and_register_media(
+                file=file,
+                db=db,
+                current_user=current_user,
+                folder=route_folder,
+            )
+            values = validated.model_dump()
+            values[field] = media.file_path
+            item = model(**values)
+            db.add(item)
+            db.commit()
+            db.refresh(item)
+            return item
+
     @router.put("/{item_id}", response_model=schema_out)
     def update_item(
         item_id: int,
@@ -66,6 +110,35 @@ def create_crud_router(
         db.commit()
         db.refresh(item)
         return item
+
+    if allowed_image_fields:
+        @router.post("/{item_id}/upload-image", response_model=schema_out)
+        async def upload_item_image(
+            item_id: int,
+            file: UploadFile = File(...),
+            field: str = Query("image_url"),
+            db: Session = Depends(get_db),
+            current_user: User = Depends(get_current_user),
+        ):
+            if field not in allowed_image_fields:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid image field '{field}'. Allowed: {allowed_image_fields}",
+                )
+            item = db.query(model).filter(model.id == item_id).first()
+            if not item:
+                raise HTTPException(status_code=404, detail="Item not found")
+
+            media = await save_upload_and_register_media(
+                file=file,
+                db=db,
+                current_user=current_user,
+                folder=route_folder,
+            )
+            setattr(item, field, media.file_path)
+            db.commit()
+            db.refresh(item)
+            return item
 
     @router.delete("/{item_id}")
     def delete_item(
