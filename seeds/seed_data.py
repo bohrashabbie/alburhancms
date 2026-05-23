@@ -118,6 +118,7 @@ def seed_all():
              "مزود رائد لحلول الإضاءة يقدم خدمات إضاءة مبتكرة واستثنائية في جميع أنحاء المنطقة.",
              "text", "Footer description"),
             ("footer_copyright", "All rights reserved", "جميع الحقوق محفوظة", "text", "Footer copyright"),
+            ("notification_email", "admin@alburhan-regional.com", "admin@alburhan-regional.com", "text", "Email address for contact form notifications"),
         ]
         for key, val_en, val_ar, stype, desc in settings_data:
             existing = db.query(SiteSetting).filter(SiteSetting.key == key).first()

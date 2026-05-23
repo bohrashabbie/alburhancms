@@ -28,6 +28,19 @@ class Settings(BaseSettings):
     # Extra key prefix inside the bucket (e.g. "cms/"). No leading slash.
     S3_KEY_PREFIX: str = ""
 
+    # --- SMTP / Email ---
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM: Optional[str] = "notifications@alburhan.com"
+    SMTP_TLS: bool = True
+    SMTP_SSL: bool = False
+
+    # --- Resend Email ---
+    RESEND_API_KEY: Optional[str] = None
+    RESEND_FROM: str = "bdm@alburhan-regional.com"
+
     class Config:
         env_file = ".env"
 

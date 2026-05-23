@@ -8,10 +8,12 @@ Responses also carry a Cache-Control header so CDNs / browsers can
 serve stale content while revalidating in the background.
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
+from app.config import get_settings
+from app.utils.mailer import send_email
 from app.models import (
     SiteSetting, NavigationItem, CarouselSlide, PageContent,
     Service, Sector, TeamMember, Country, ContactInfo,
@@ -235,9 +237,46 @@ def get_static_page(slug: str, db: Session = Depends(get_db)):
 
 
 @router.post("/contact", response_model=ContactSubmissionOut)
-def submit_contact_form(data: ContactSubmissionCreate, db: Session = Depends(get_db)):
+def submit_contact_form(
+    data: ContactSubmissionCreate, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    # Save to database
     submission = ContactSubmission(**data.model_dump())
     db.add(submission)
     db.commit()
     db.refresh(submission)
+
+    # Resolve notification recipient from settings
+    settings_email = db.query(SiteSetting).filter(SiteSetting.key == "notification_email").first()
+    recipient = settings_email.value_en if settings_email and settings_email.value_en else None
+    
+    if recipient:
+        # Build email content
+        subject = f"New Website Inquiry from {submission.name}"
+        if submission.subject:
+            subject = f"{submission.subject} (from {submission.name})"
+            
+        body = f"""
+        <h2>New Contact Form Submission</h2>
+        <p><strong>Name:</strong> {submission.name}</p>
+        <p><strong>Email:</strong> {submission.email}</p>
+        <p><strong>Phone:</strong> {submission.phone or 'N/A'}</p>
+        <p><strong>Subject:</strong> {submission.subject or 'General Inquiry'}</p>
+        <p><strong>Message:</strong></p>
+        <div style="white-space: pre-wrap; padding: 10px; background: #f4f4f4; border-radius: 4px;">
+        {submission.message}
+        </div>
+        """
+        
+        # Send in background to keep response fast
+        background_tasks.add_task(
+            send_email,
+            subject=subject,
+            body=body,
+            to_emails=[recipient],
+            html=True
+        )
+
     return submission
