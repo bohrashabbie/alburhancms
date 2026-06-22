@@ -536,34 +536,173 @@ class BrandUpdate(BaseModel):
 # ============================================================================
 # PRODUCTS
 # ============================================================================
-class ProductOut(BaseModel):
+class ProductImageOut(BaseModel):
     id: int
-    name_en: str
-    name_ar: Optional[str] = None
-    description_en: Optional[str] = None
-    description_ar: Optional[str] = None
-    image_url: Optional[str] = None
+    product_id: int
+    image_url: str
+    image_type: str = "gallery"
     sort_order: int = 0
     is_active: bool = True
     class Config:
         from_attributes = True
 
-class ProductCreate(BaseModel):
+class ProductImageCreate(BaseModel):
+    product_id: int
+    image_url: str
+    image_type: str = "gallery"
+    sort_order: int = 0
+    is_active: bool = True
+
+class ProductImageUpdate(BaseModel):
+    image_url: Optional[str] = None
+    image_type: Optional[str] = None
+    sort_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class CategoryBrief(BaseModel):
+    id: int
+    slug: str
+    name_en: str
+    name_ar: Optional[str] = None
+    class Config:
+        from_attributes = True
+
+
+class ProductOut(BaseModel):
+    id: int
+    slug: Optional[str] = None
+    model_code: Optional[str] = None
+    category_id: Optional[int] = None
     name_en: str
     name_ar: Optional[str] = None
     description_en: Optional[str] = None
     description_ar: Optional[str] = None
     image_url: Optional[str] = None
+    spec_image_url: Optional[str] = None
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    seo_keywords: Optional[str] = None
+    sort_order: int = 0
+    is_active: bool = True
+    category: Optional[CategoryBrief] = None
+    images: List[ProductImageOut] = []
+    class Config:
+        from_attributes = True
+
+class ProductCreate(BaseModel):
+    slug: Optional[str] = None
+    model_code: Optional[str] = None
+    category_id: Optional[int] = None
+    name_en: str
+    name_ar: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ar: Optional[str] = None
+    image_url: Optional[str] = None
+    spec_image_url: Optional[str] = None
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    seo_keywords: Optional[str] = None
     sort_order: int = 0
     is_active: bool = True
 
 class ProductUpdate(BaseModel):
+    slug: Optional[str] = None
+    model_code: Optional[str] = None
+    category_id: Optional[int] = None
     name_en: Optional[str] = None
     name_ar: Optional[str] = None
     description_en: Optional[str] = None
     description_ar: Optional[str] = None
     image_url: Optional[str] = None
+    spec_image_url: Optional[str] = None
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    seo_keywords: Optional[str] = None
     sort_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+# ============================================================================
+# PRODUCT CATEGORIES
+# ============================================================================
+class ProductCategoryOut(BaseModel):
+    id: int
+    slug: str
+    name_en: str
+    name_ar: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ar: Optional[str] = None
+    image_url: Optional[str] = None
+    icon_url: Optional[str] = None
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    seo_keywords: Optional[str] = None
+    sort_order: int = 0
+    is_active: bool = True
+    class Config:
+        from_attributes = True
+
+class ProductCategoryCreate(BaseModel):
+    slug: str
+    name_en: str
+    name_ar: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ar: Optional[str] = None
+    image_url: Optional[str] = None
+    icon_url: Optional[str] = None
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    seo_keywords: Optional[str] = None
+    sort_order: int = 0
+    is_active: bool = True
+
+class ProductCategoryUpdate(BaseModel):
+    slug: Optional[str] = None
+    name_en: Optional[str] = None
+    name_ar: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ar: Optional[str] = None
+    image_url: Optional[str] = None
+    icon_url: Optional[str] = None
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    seo_keywords: Optional[str] = None
+    sort_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+# ============================================================================
+# SEARCH ALIASES
+# ============================================================================
+class SearchAliasOut(BaseModel):
+    id: int
+    keyword: str
+    target_type: str = "product"
+    target_slug: str
+    target_url: Optional[str] = None
+    is_redirect: bool = True
+    weight: int = 0
+    is_active: bool = True
+    class Config:
+        from_attributes = True
+
+class SearchAliasCreate(BaseModel):
+    keyword: str
+    target_type: str = "product"
+    target_slug: str
+    target_url: Optional[str] = None
+    is_redirect: bool = True
+    weight: int = 0
+    is_active: bool = True
+
+class SearchAliasUpdate(BaseModel):
+    keyword: Optional[str] = None
+    target_type: Optional[str] = None
+    target_slug: Optional[str] = None
+    target_url: Optional[str] = None
+    is_redirect: Optional[bool] = None
+    weight: Optional[int] = None
     is_active: Optional[bool] = None
 
 

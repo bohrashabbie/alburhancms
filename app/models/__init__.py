@@ -12,6 +12,9 @@ from app.models.contact_info import ContactInfo
 from app.models.social_link import SocialLink
 from app.models.brand import Brand
 from app.models.product import Product
+from app.models.product_category import ProductCategory
+from app.models.product_image import ProductImage
+from app.models.search_alias import SearchAlias
 from app.models.banner import Banner
 from app.models.project import ProjectCategory, Project, ProjectImage
 from app.models.static_page import StaticPage
@@ -23,6 +26,7 @@ __all__ = [
     "User", "SiteSetting", "NavigationItem", "CarouselSlide",
     "PageContent", "Service", "ServiceItem", "Sector", "TeamMember",
     "Country", "Branch", "ContactInfo", "SocialLink", "Brand",
-    "Product", "Banner", "ProjectCategory", "Project", "ProjectImage",
+    "Product", "ProductCategory", "ProductImage", "SearchAlias",
+    "Banner", "ProjectCategory", "Project", "ProjectImage",
     "StaticPage", "ContactSubmission", "FooterLink", "MediaFile",
 ]

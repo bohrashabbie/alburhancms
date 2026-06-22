@@ -19,6 +19,9 @@ from app.models.contact_info import ContactInfo
 from app.models.social_link import SocialLink
 from app.models.brand import Brand
 from app.models.product import Product
+from app.models.product_category import ProductCategory
+from app.models.product_image import ProductImage
+from app.models.search_alias import SearchAlias
 from app.models.banner import Banner
 from app.models.static_page import StaticPage
 from app.models.footer_link import FooterLink
@@ -35,6 +38,9 @@ from app.schemas.schemas import (
     SocialLinkOut, SocialLinkCreate, SocialLinkUpdate,
     BrandOut, BrandCreate, BrandUpdate,
     ProductOut, ProductCreate, ProductUpdate,
+    ProductCategoryOut, ProductCategoryCreate, ProductCategoryUpdate,
+    ProductImageOut, ProductImageCreate, ProductImageUpdate,
+    SearchAliasOut, SearchAliasCreate, SearchAliasUpdate,
     BannerOut, BannerCreate, BannerUpdate,
     StaticPageOut, StaticPageCreate, StaticPageUpdate,
     FooterLinkOut, FooterLinkCreate, FooterLinkUpdate,
@@ -87,6 +93,9 @@ app.include_router(create_crud_router("/api/contact-info", ["Contact Info"], Con
 app.include_router(create_crud_router("/api/social-links", ["Social Links"], SocialLink, SocialLinkOut, SocialLinkCreate, SocialLinkUpdate))
 app.include_router(create_crud_router("/api/brands", ["Brands"], Brand, BrandOut, BrandCreate, BrandUpdate))
 app.include_router(create_crud_router("/api/products", ["Products"], Product, ProductOut, ProductCreate, ProductUpdate))
+app.include_router(create_crud_router("/api/product-categories", ["Product Categories"], ProductCategory, ProductCategoryOut, ProductCategoryCreate, ProductCategoryUpdate))
+app.include_router(create_crud_router("/api/product-images", ["Product Images"], ProductImage, ProductImageOut, ProductImageCreate, ProductImageUpdate))
+app.include_router(create_crud_router("/api/search-aliases", ["Search Aliases"], SearchAlias, SearchAliasOut, SearchAliasCreate, SearchAliasUpdate))
 app.include_router(create_crud_router("/api/banners", ["Banners"], Banner, BannerOut, BannerCreate, BannerUpdate))
 app.include_router(create_crud_router("/api/static-pages", ["Static Pages"], StaticPage, StaticPageOut, StaticPageCreate, StaticPageUpdate, order_by="id"))
 app.include_router(create_crud_router("/api/footer-links", ["Footer Links"], FooterLink, FooterLinkOut, FooterLinkCreate, FooterLinkUpdate))

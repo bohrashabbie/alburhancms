@@ -19,13 +19,14 @@ from app.models import (
     Service, Sector, TeamMember, Country, ContactInfo,
     SocialLink, Brand, Product, Banner, ProjectCategory,
     FooterLink, StaticPage, ContactSubmission,
+    ProductCategory, ProductImage, SearchAlias,
 )
 from app.schemas.schemas import (
     FullSiteContentOut, ContactSubmissionCreate, ContactSubmissionOut,
     SiteSettingOut, NavigationItemOut, CarouselSlideOut, PageContentOut,
     ServiceOut, SectorOut, TeamMemberOut, CountryOut, ContactInfoOut,
     SocialLinkOut, BrandOut, ProductOut, BannerOut, ProjectCategoryOut,
-    FooterLinkOut, StaticPageOut,
+    FooterLinkOut, StaticPageOut, ProductCategoryOut,
 )
 from app.utils import cache as app_cache
 
@@ -194,10 +195,141 @@ def get_brands(db: Session = Depends(get_db)):
 
 
 @router.get("/products")
-def get_products(db: Session = Depends(get_db)):
+def get_products(category: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    cache_key = f"products:{category or 'all'}"
     def _build():
-        return db.query(Product).filter(Product.is_active == True).order_by(Product.sort_order).all()
-    return _cached_json("products", _build)
+        q = db.query(Product).filter(Product.is_active == True)
+        if category:
+            q = q.join(ProductCategory, Product.category_id == ProductCategory.id).filter(
+                ProductCategory.slug == category
+            )
+        items = q.order_by(Product.sort_order).all()
+        return [ProductOut.model_validate(p) for p in items]
+    return _cached_json(cache_key, _build)
+
+
+@router.get("/products/{slug}")
+def get_product_by_slug(slug: str, db: Session = Depends(get_db)):
+    cache_key = f"product:{slug}"
+    def _build():
+        product = db.query(Product).filter(Product.slug == slug, Product.is_active == True).first()
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        return ProductOut.model_validate(product)
+    return _cached_json(cache_key, _build)
+
+
+@router.get("/product-categories")
+def get_product_categories(db: Session = Depends(get_db)):
+    def _build():
+        cats = db.query(ProductCategory).filter(ProductCategory.is_active == True).order_by(ProductCategory.sort_order).all()
+        return [ProductCategoryOut.model_validate(c) for c in cats]
+    return _cached_json("product-categories", _build)
+
+
+@router.get("/product-categories/{slug}")
+def get_product_category_by_slug(slug: str, db: Session = Depends(get_db)):
+    cache_key = f"product-category:{slug}"
+    def _build():
+        cat = db.query(ProductCategory).filter(ProductCategory.slug == slug, ProductCategory.is_active == True).first()
+        if not cat:
+            raise HTTPException(status_code=404, detail="Category not found")
+        products = db.query(Product).filter(
+            Product.category_id == cat.id, Product.is_active == True
+        ).order_by(Product.sort_order).all()
+        return {
+            "category": ProductCategoryOut.model_validate(cat).model_dump(mode="json"),
+            "products": [ProductOut.model_validate(p).model_dump(mode="json") for p in products],
+        }
+    return _cached_json(cache_key, _build)
+
+
+# ---------------------------------------------------------------------------
+# Search — exact match jumps straight to the page, else returns a ranked list
+# ---------------------------------------------------------------------------
+
+def _norm(s: Optional[str]) -> str:
+    """Normalize a search token: lowercase, drop spaces / dashes / underscores."""
+    if not s:
+        return ""
+    return "".join(ch for ch in s.lower() if ch.isalnum())
+
+
+def _product_url(p: Product) -> str:
+    cat_slug = p.category.slug if p.category else "all"
+    return f"/products/{cat_slug}/{p.slug}"
+
+
+@router.get("/search")
+def search(q: str = Query(..., min_length=1), db: Session = Depends(get_db)):
+    cache_key = f"search:{_norm(q)}"
+
+    def _build():
+        nq = _norm(q)
+
+        # 1) Admin-managed alias exact match -> redirect
+        for alias in db.query(SearchAlias).filter(SearchAlias.is_active == True).all():
+            if _norm(alias.keyword) == nq and alias.is_redirect:
+                url = alias.target_url
+                if not url:
+                    if alias.target_type == "category":
+                        url = f"/products/{alias.target_slug}"
+                    else:
+                        prod = db.query(Product).filter(Product.slug == alias.target_slug).first()
+                        url = _product_url(prod) if prod else f"/products"
+                return {"redirect": url}
+
+        # 2) Exact model code -> straight to product page
+        for p in db.query(Product).filter(Product.is_active == True).all():
+            if _norm(p.model_code) == nq or _norm(p.slug) == nq or _norm(p.name_en) == nq:
+                return {"redirect": _product_url(p)}
+
+        # 3) Exact category -> straight to category page
+        for c in db.query(ProductCategory).filter(ProductCategory.is_active == True).all():
+            if _norm(c.slug) == nq or _norm(c.name_en) == nq:
+                return {"redirect": f"/products/{c.slug}"}
+
+        # 4) Otherwise -> ranked partial results
+        like = f"%{q.strip()}%"
+        prod_q = db.query(Product).filter(
+            Product.is_active == True,
+            (Product.name_en.ilike(like))
+            | (Product.model_code.ilike(like))
+            | (Product.seo_keywords.ilike(like)),
+        ).order_by(Product.sort_order).limit(40).all()
+
+        cat_q = db.query(ProductCategory).filter(
+            ProductCategory.is_active == True,
+            (ProductCategory.name_en.ilike(like))
+            | (ProductCategory.seo_keywords.ilike(like)),
+        ).order_by(ProductCategory.sort_order).limit(20).all()
+
+        return {
+            "redirect": None,
+            "query": q,
+            "categories": [
+                {
+                    "slug": c.slug,
+                    "name_en": c.name_en,
+                    "image_url": c.image_url,
+                    "url": f"/products/{c.slug}",
+                }
+                for c in cat_q
+            ],
+            "products": [
+                {
+                    "slug": p.slug,
+                    "model_code": p.model_code,
+                    "name_en": p.name_en,
+                    "image_url": p.image_url,
+                    "category": p.category.name_en if p.category else None,
+                    "url": _product_url(p),
+                }
+                for p in prod_q
+            ],
+        }
+
+    return _cached_json(cache_key, _build)
 
 
 @router.get("/banners")
