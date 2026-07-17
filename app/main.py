@@ -64,9 +64,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static file serving for uploads
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+# Static file serving for uploads — only when using local storage.
+# With STORAGE_BACKEND=s3 every asset lives in (and is served from) S3,
+# so nothing is written to or served from the container filesystem.
+if (settings.STORAGE_BACKEND or "local").lower() != "s3":
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 # Create tables
 Base.metadata.create_all(bind=engine)

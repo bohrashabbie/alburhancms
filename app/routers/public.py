@@ -41,12 +41,21 @@ router = APIRouter(prefix="/api/public", tags=["Public API"])
 CACHE_CONTROL = "public, max-age=30, s-maxage=60, stale-while-revalidate=120"
 
 
-def _cached_json(cache_key: str, builder, status_code: int = 200):
-    """Return cached JSON response or build, cache, and return it."""
+def _cached_json(cache_key: str, builder, status_code: int = 200, schema=None):
+    """Return cached JSON response or build, cache, and return it.
+
+    Pass `schema` (a Pydantic Out model) when the builder returns raw ORM
+    objects so they get converted before JSON serialisation.
+    """
     cached = app_cache.get(cache_key)
     if cached is not None:
         return JSONResponse(content=cached, headers={"Cache-Control": CACHE_CONTROL, "X-Cache": "HIT"})
     result = builder()
+    if schema is not None:
+        if isinstance(result, list):
+            result = [schema.model_validate(r) for r in result]
+        else:
+            result = schema.model_validate(result)
     # Pydantic model → dict for JSON serialisation
     if hasattr(result, "model_dump"):
         data = result.model_dump(mode="json")
@@ -102,21 +111,21 @@ def get_full_site_content(db: Session = Depends(get_db)):
 def get_settings(db: Session = Depends(get_db)):
     def _build():
         return db.query(SiteSetting).all()
-    return _cached_json("settings", _build)
+    return _cached_json("settings", _build, schema=SiteSettingOut)
 
 
 @router.get("/navigation")
 def get_navigation(db: Session = Depends(get_db)):
     def _build():
         return db.query(NavigationItem).filter(NavigationItem.is_active == True).order_by(NavigationItem.sort_order).all()
-    return _cached_json("navigation", _build)
+    return _cached_json("navigation", _build, schema=NavigationItemOut)
 
 
 @router.get("/carousel")
 def get_carousel(db: Session = Depends(get_db)):
     def _build():
         return db.query(CarouselSlide).filter(CarouselSlide.is_active == True).order_by(CarouselSlide.sort_order).all()
-    return _cached_json("carousel", _build)
+    return _cached_json("carousel", _build, schema=CarouselSlideOut)
 
 
 @router.get("/page-contents")
@@ -127,35 +136,35 @@ def get_page_contents(page_key: Optional[str] = Query(None), db: Session = Depen
         if page_key:
             q = q.filter(PageContent.page_key == page_key)
         return q.order_by(PageContent.sort_order).all()
-    return _cached_json(cache_key, _build)
+    return _cached_json(cache_key, _build, schema=PageContentOut)
 
 
 @router.get("/services")
 def get_services(db: Session = Depends(get_db)):
     def _build():
         return db.query(Service).filter(Service.is_active == True).order_by(Service.sort_order).all()
-    return _cached_json("services", _build)
+    return _cached_json("services", _build, schema=ServiceOut)
 
 
 @router.get("/sectors")
 def get_sectors(db: Session = Depends(get_db)):
     def _build():
         return db.query(Sector).filter(Sector.is_active == True).order_by(Sector.sort_order).all()
-    return _cached_json("sectors", _build)
+    return _cached_json("sectors", _build, schema=SectorOut)
 
 
 @router.get("/team")
 def get_team(db: Session = Depends(get_db)):
     def _build():
         return db.query(TeamMember).filter(TeamMember.is_active == True).order_by(TeamMember.sort_order).all()
-    return _cached_json("team", _build)
+    return _cached_json("team", _build, schema=TeamMemberOut)
 
 
 @router.get("/countries")
 def get_countries(db: Session = Depends(get_db)):
     def _build():
         return db.query(Country).filter(Country.is_active == True).order_by(Country.sort_order).all()
-    return _cached_json("countries", _build)
+    return _cached_json("countries", _build, schema=CountryOut)
 
 
 @router.get("/countries/{slug}")
@@ -166,7 +175,7 @@ def get_country_by_slug(slug: str, db: Session = Depends(get_db)):
         if not country:
             raise HTTPException(status_code=404, detail="Country not found")
         return country
-    return _cached_json(cache_key, _build)
+    return _cached_json(cache_key, _build, schema=CountryOut)
 
 
 @router.get("/contact-info")
@@ -177,21 +186,21 @@ def get_contact_info(country_id: Optional[int] = Query(None), db: Session = Depe
         if country_id:
             q = q.filter(ContactInfo.country_id == country_id)
         return q.all()
-    return _cached_json(cache_key, _build)
+    return _cached_json(cache_key, _build, schema=ContactInfoOut)
 
 
 @router.get("/social-links")
 def get_social_links(db: Session = Depends(get_db)):
     def _build():
         return db.query(SocialLink).filter(SocialLink.is_active == True).order_by(SocialLink.sort_order).all()
-    return _cached_json("social-links", _build)
+    return _cached_json("social-links", _build, schema=SocialLinkOut)
 
 
 @router.get("/brands")
 def get_brands(db: Session = Depends(get_db)):
     def _build():
         return db.query(Brand).filter(Brand.is_active == True).order_by(Brand.sort_order).all()
-    return _cached_json("brands", _build)
+    return _cached_json("brands", _build, schema=BrandOut)
 
 
 @router.get("/products")
@@ -340,21 +349,21 @@ def get_banners(country_id: Optional[int] = Query(None), db: Session = Depends(g
         if country_id:
             q = q.filter(Banner.country_id == country_id)
         return q.order_by(Banner.sort_order).all()
-    return _cached_json(cache_key, _build)
+    return _cached_json(cache_key, _build, schema=BannerOut)
 
 
 @router.get("/project-categories")
 def get_project_categories(db: Session = Depends(get_db)):
     def _build():
         return db.query(ProjectCategory).filter(ProjectCategory.is_active == True).order_by(ProjectCategory.sort_order).all()
-    return _cached_json("project-categories", _build)
+    return _cached_json("project-categories", _build, schema=ProjectCategoryOut)
 
 
 @router.get("/footer-links")
 def get_footer_links(db: Session = Depends(get_db)):
     def _build():
         return db.query(FooterLink).filter(FooterLink.is_active == True).order_by(FooterLink.sort_order).all()
-    return _cached_json("footer-links", _build)
+    return _cached_json("footer-links", _build, schema=FooterLinkOut)
 
 
 @router.get("/pages/{slug}")
@@ -365,7 +374,7 @@ def get_static_page(slug: str, db: Session = Depends(get_db)):
         if not page:
             raise HTTPException(status_code=404, detail="Page not found")
         return page
-    return _cached_json(cache_key, _build)
+    return _cached_json(cache_key, _build, schema=StaticPageOut)
 
 
 @router.post("/contact", response_model=ContactSubmissionOut)
